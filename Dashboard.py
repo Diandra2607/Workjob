@@ -14,26 +14,26 @@ def load_data():
     """
     data_files = {
         # --- Core Employee & Dim Data ---
-        "employees": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - employees.csv",
-        "dim_directorates": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_directorates.csv",
-        "tv_tgv_mapping": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - Talent Variable (TV) & Talent Group Variable (TGV).csv",
-        "dim_divisions": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_divisions.csv",
-        "dim_departments": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_departments.csv",
-        "dim_positions": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_positions.csv",
-        "dim_areas": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_areas.csv",
-        "dim_companies": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_companies.csv",
-        "dim_competency_pillars": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_competency_pillars.csv",
+        "employees": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - employees.csv",
+        "dim_directorates": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_directorates.csv",
+        "tv_tgv_mapping": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - Talent Variable (TV) & Talent Group Variable (TGV).csv",
+        "dim_divisions": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_divisions.csv",
+        "dim_departments": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_departments.csv",
+        "dim_positions": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_positions.csv",
+        "dim_areas": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_areas.csv",
+        "dim_companies": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_companies.csv",
+        "dim_competency_pillars": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_competency_pillars.csv",
 
         # --- Analysis Data ---
-        "performance_ratings": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - performance_yearly.csv",
-        "competencies_yearly": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - competencies_yearly.csv",
-        "papi_scores": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - papi_scores.csv",
-        "profiles_psych": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - profiles_psych.csv",
-        "strengths": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - strengths.csv",
+        "performance_ratings": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - performance_yearly.csv",
+        "competencies_yearly": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - competencies_yearly.csv",
+        "papi_scores": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - papi_scores.csv",
+        "profiles_psych": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - profiles_psych.csv",
+        "strengths": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - strengths.csv",
 
         # --- Optional Dim Files ---
-        "dim_grades": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_grades.csv",
-        "dim_education": r"C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - dim_education.csv"
+        "dim_grades": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_grades.csv",
+        "dim_education": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_education.csv"
     }
 
     df_dict = {}
