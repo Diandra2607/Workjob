@@ -105,7 +105,7 @@ def main():
     
     # ✅ FIX: use raw string here to prevent unicode escape crash
     if any(df is None for df in [df_dict.get('employees'), df_dict.get('performance_ratings')]):
-        st.error(r"Core files `C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - employees.csv` or `C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - performance_yearly.csv` are missing. The app cannot run.")
+        st.error(r"Core files `C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - employees.csv` or `C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - performance_yearly.csv` are missing. The app cannot run.")
         return
 
     # --- Process Performance Data ---
@@ -495,3 +495,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
