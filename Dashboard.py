@@ -9,31 +9,34 @@ import os
 @st.cache_data
 def load_data():
     """
-    Loads all available and expected CSV files into a dictionary of DataFrames.
-    Uses try-except blocks to handle missing files gracefully.
+    Loads all available and expected CSV files from the ROOT directory.
+    (Sesuai dengan struktur GitHub Anda)
     """
+    
+    # --- Path ini mengasumsikan file CSV ada di ROOT (level yang sama dengan Dashboard.py) ---
+    
     data_files = {
         # --- Core Employee & Dim Data ---
-        "employees": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - employees.csv",
-        "dim_directorates": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_directorates.csv",
-        "tv_tgv_mapping": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - Talent Variable (TV) & Talent Group Variable (TGV).csv",
-        "dim_divisions": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_divisions.csv",
-        "dim_departments": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_departments.csv",
-        "dim_positions": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_positions.csv",
-        "dim_areas": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_areas.csv",
-        "dim_companies": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_companies.csv",
-        "dim_competency_pillars": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_competency_pillars.csv",
+        "employees": "Study Case DA - employees.csv",
+        "dim_directorates": "Study Case DA - dim_directorates.csv",
+        "tv_tgv_mapping": "Study Case DA - Talent Variable (TV) & Talent Group Variable (TGV).csv",
+        "dim_divisions": "Study Case DA - dim_divisions.csv",
+        "dim_departments": "Study Case DA - dim_departments.csv",
+        "dim_positions": "Study Case DA - dim_positions.csv",
+        "dim_areas": "Study Case DA - dim_areas.csv",
+        "dim_companies": "Study Case DA - dim_companies.csv",
+        "dim_competency_pillars": "Study Case DA - dim_competency_pillars.csv",
 
         # --- Analysis Data ---
-        "performance_ratings": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - performance_yearly.csv",
-        "competencies_yearly": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - competencies_yearly.csv",
-        "papi_scores": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - papi_scores.csv",
-        "profiles_psych": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - profiles_psych.csv",
-        "strengths": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - strengths.csv",
+        "performance_ratings": "Study Case DA - performance_yearly.csv",
+        "competencies_yearly": "Study Case DA - competencies_yearly.csv",
+        "papi_scores": "Study Case DA - papi_scores.csv",
+        "profiles_psych": "Study Case DA - profiles_psych.csv",
+        "strengths": "Study Case DA - strengths.csv",
 
         # --- Optional Dim Files ---
-        "dim_grades": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_grades.csv",
-        "dim_education": r"C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - dim_education.csv"
+        "dim_grades": "Study Case DA - dim_grades.csv",
+        "dim_education": "Study Case DA - dim_education.csv"
     }
 
     df_dict = {}
@@ -41,8 +44,9 @@ def load_data():
 
     for key, filename in data_files.items():
         try:
+            # Cek apakah file ada
             if os.path.exists(filename):
-                df_dict[key] = pd.read_csv(filename)   # ✅ pd.read_csv included, no change
+                df_dict[key] = pd.read_csv(filename)
             else:
                 missing_files.append(filename)
                 df_dict[key] = None
@@ -51,7 +55,7 @@ def load_data():
             df_dict[key] = None
 
     if missing_files:
-        st.error(f"File not found: {', '.join(missing_files)}. Please make sure all files are available.")
+        st.error(f"File not found: {', '.join(missing_files)}. Please make sure all files are available in your GitHub repository (di folder utama).")
 
     # --- Post-processing after load ---
     if df_dict.get("strengths") is not None:
@@ -103,9 +107,9 @@ def main():
 
     df_dict, missing_files = load_data()
     
-    # ✅ FIX: use raw string here to prevent unicode escape crash
+    # ✅ FIX: Ganti pesan error untuk membaca dari root
     if any(df is None for df in [df_dict.get('employees'), df_dict.get('performance_ratings')]):
-        st.error(r"Core files `C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - employees.csv` or `C:\Users\RR Diandra Pradnya\Desktop\Rakamin\Study Case DA - performance_yearly.csv` are missing. The app cannot run.")
+        st.error(r"Core files 'Study Case DA - employees.csv' or 'Study Case DA - performance_yearly.csv' are missing. The app cannot run.")
         return
 
     # --- Process Performance Data ---
@@ -167,7 +171,7 @@ def main():
             # Viz 1: Years of Service
             st.subheader("Years of Service Distribution")
             fig_yos = px.histogram(analysis_df, x='years_of_service_months', color='high_performer', 
-                                 barmode='overlay', marginal='box', title="Distribution of Years of Service")
+                                   barmode='overlay', marginal='box', title="Distribution of Years of Service")
             st.plotly_chart(fig_yos, use_container_width=True)
 
             # Viz 2: Grade Level
@@ -177,7 +181,7 @@ def main():
             
             grade_viz = analysis_df.groupby(grade_col)['high_performer'].mean().reset_index().sort_values(by='high_performer', ascending=False)
             fig_grade = px.bar(grade_viz, x=grade_col, y='high_performer', 
-                             title='Proportion of High Performers by Grade', labels={grade_col: 'Grade', 'high_performer': 'High Performer %'})
+                               title='Proportion of High Performers by Grade', labels={grade_col: 'Grade', 'high_performer': 'High Performer %'})
             st.plotly_chart(fig_grade, use_container_width=True)
 
         with col2:
@@ -188,7 +192,7 @@ def main():
 
             pos_viz = analysis_df.groupby(pos_col)['high_performer'].mean().reset_index().sort_values(by='high_performer', ascending=False)
             fig_pos = px.bar(pos_viz.head(15), x=pos_col, y='high_performer', 
-                           title='Top 15 Positions by High Performer %', labels={pos_col: 'Position', 'high_performer': 'High Performer %'})
+                             title='Top 15 Positions by High Performer %', labels={pos_col: 'Position', 'high_performer': 'High Performer %'})
             st.plotly_chart(fig_pos, use_container_width=True)
 
             # Viz 4: Education Level
@@ -198,7 +202,7 @@ def main():
 
             edu_viz = analysis_df.groupby(edu_col)['high_performer'].mean().reset_index().sort_values(by='high_performer', ascending=False)
             fig_edu = px.bar(edu_viz, x=edu_col, y='high_performer', 
-                           title='Proportion of High Performers by Education', labels={edu_col: 'Education', 'high_performer': 'High Performer %'})
+                             title='Proportion of High Performers by Education', labels={edu_col: 'Education', 'high_performer': 'High Performer %'})
             st.plotly_chart(fig_edu, use_container_width=True)
 
     # --- Tab 2: Competency Pillars ---
@@ -225,51 +229,60 @@ def main():
             # 4. Viz 1: Radar Chart
             st.subheader("Radar Chart: High Performers vs. Others")
             radar_data = comp_analysis_df.groupby(['high_performer', 'pillar_label'])['score'].mean().reset_index()
-            radar_pivot = radar_data.pivot(index='high_performer', columns='pillar_label', values='score').reset_index()
             
-            # Get categories from dim_comp to ensure order
-            categories = dim_comp['pillar_label'].unique().tolist()
-            
-            # Ensure all categories are present
-            for cat in categories:
-                if cat not in radar_pivot.columns:
-                    radar_pivot[cat] = np.nan
-            
-            # Re-order pivot table columns to match categories list
-            radar_pivot = radar_pivot[['high_performer'] + categories]
+            # Perbaikan: Cek jika radar_data kosong
+            if radar_data.empty:
+                st.warning("No competency data available to display radar chart.")
+            else:
+                radar_pivot = radar_data.pivot(index='high_performer', columns='pillar_label', values='score').reset_index()
+                
+                # Get categories from dim_comp to ensure order
+                categories = dim_comp['pillar_label'].unique().tolist()
+                
+                # Ensure all categories are present
+                for cat in categories:
+                    if cat not in radar_pivot.columns:
+                        radar_pivot[cat] = np.nan
+                
+                # Re-order pivot table columns to match categories list
+                radar_pivot = radar_pivot[['high_performer'] + categories]
 
-            fig_radar = go.Figure()
-            
-            # High Performer Trace
-            try:
-                hp_data = radar_pivot[radar_pivot['high_performer'] == True].squeeze()
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=hp_data[categories].values, 
-                    theta=categories, 
-                    fill='toself', 
-                    name='High Performers (Rating 5)'
-                ))
-            except Exception as e:
-                st.warning(f"Could not draw High Performer radar: {e}")
-            
-            # Others Trace
-            try:
-                op_data = radar_pivot[radar_pivot['high_performer'] == False].squeeze()
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=op_data[categories].values, 
-                    theta=categories, 
-                    fill='toself', 
-                    name='Others (Rating < 5)'
-                ))
-            except Exception as e:
-                st.warning(f"Could not draw Others radar: {e}")
-            
-            fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[1, 5])),
-                showlegend=True,
-                title="Competency Scores: High Performers vs. Others"
-            )
-            st.plotly_chart(fig_radar, use_container_width=True)
+                fig_radar = go.Figure()
+                
+                # High Performer Trace
+                try:
+                    hp_data_row = radar_pivot[radar_pivot['high_performer'] == True]
+                    if not hp_data_row.empty:
+                        hp_data = hp_data_row.iloc[0]
+                        fig_radar.add_trace(go.Scatterpolar(
+                            r=hp_data[categories].values, 
+                            theta=categories, 
+                            fill='toself', 
+                            name='High Performers (Rating 5)'
+                        ))
+                except Exception as e:
+                    st.warning(f"Could not draw High Performer radar: {e}")
+                
+                # Others Trace
+                try:
+                    op_data_row = radar_pivot[radar_pivot['high_performer'] == False]
+                    if not op_data_row.empty:
+                        op_data = op_data_row.iloc[0]
+                        fig_radar.add_trace(go.Scatterpolar(
+                            r=op_data[categories].values, 
+                            theta=categories, 
+                            fill='toself', 
+                            name='Others (Rating < 5)'
+                        ))
+                except Exception as e:
+                    st.warning(f"Could not draw Others radar: {e}")
+                
+                fig_radar.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[1, 5])),
+                    showlegend=True,
+                    title="Competency Scores: High Performers vs. Others"
+                )
+                st.plotly_chart(fig_radar, use_container_width=True)
 
             # 5. Viz 2: Heatmap (Correlation)
             st.subheader("Competency Correlation Heatmap")
@@ -280,15 +293,18 @@ def main():
             corr = comp_pivot_merged.corr(numeric_only=True)
             
             # Filter to show correlation with 'rating' only
-            corr_rating = corr[['rating']].sort_values(by='rating', ascending=False)
-            corr_rating = corr_rating.drop('rating', errors='ignore') # Drop self-correlation
-            
-            fig_heatmap = px.imshow(corr_rating, text_auto=True, 
-                                    title="Correlation of Competencies with Overall Rating",
-                                    color_continuous_scale='RdBu_r', range_color=[-1, 1],
-                                    labels={'index': 'Competency Pillar'})
-            st.plotly_chart(fig_heatmap, use_container_width=True)
-            st.write("This chart shows which competencies have the strongest positive (blue) or negative (red) relationship with the performance `rating`.")
+            if 'rating' in corr:
+                corr_rating = corr[['rating']].sort_values(by='rating', ascending=False)
+                corr_rating = corr_rating.drop('rating', errors='ignore') # Drop self-correlation
+                
+                fig_heatmap = px.imshow(corr_rating, text_auto=True, 
+                                        title="Correlation of Competencies with Overall Rating",
+                                        color_continuous_scale='RdBu_r', range_color=[-1, 1],
+                                        labels={'index': 'Competency Pillar'})
+                st.plotly_chart(fig_heatmap, use_container_width=True)
+                st.write("This chart shows which competencies have the strongest positive (blue) or negative (red) relationship with the performance `rating`.")
+            else:
+                st.warning("Could not calculate competency correlation.")
 
     # --- Tab 3: Psychometric Profiles ---
     with tab3:
@@ -318,7 +334,7 @@ def main():
                 if 'disc' in psych_analysis_df.columns:
                     disc_viz = psych_analysis_df.groupby('disc')['high_performer'].mean().reset_index().sort_values(by='high_performer', ascending=False)
                     fig_disc = px.bar(disc_viz, x='disc', y='high_performer', title='Proportion of High Performers by DISC Type',
-                                    labels={'disc': 'DISC Type', 'high_performer': 'High Performer %'})
+                                      labels={'disc': 'DISC Type', 'high_performer': 'High Performer %'})
                     st.plotly_chart(fig_disc, use_container_width=True)
                 else:
                     st.warning("`disc` column not found in `profiles_psych.csv`")
@@ -328,7 +344,7 @@ def main():
                 if 'mbti' in psych_analysis_df.columns:
                     mbti_viz = psych_analysis_df.groupby('mbti')['high_performer'].mean().reset_index().sort_values(by='high_performer', ascending=False)
                     fig_mbti = px.bar(mbti_viz, x='mbti', y='high_performer', title='Proportion of High Performers by MBTI Type',
-                                    labels={'mbti': 'MBTI Type', 'high_performer': 'High Performer %'})
+                                      labels={'mbti': 'MBTI Type', 'high_performer': 'High Performer %'})
                     st.plotly_chart(fig_mbti, use_container_width=True)
                 else:
                     st.warning("`mbti` column not found in `profiles_psych.csv`")
@@ -361,7 +377,7 @@ def main():
         st.write("Analysis of `strengths.csv`. (Note: 'theme' column is used as `strength_name`)")
         
         if df_dict.get('strengths') is None:
-            st.warning(r"`C:\Users\RR Diandra Pradnya\OneDrive\Study Case DA - strengths.csv` not found.")
+            st.warning(r"`Study Case DA - strengths.csv` not found.")
         else:
             # --- Start Strengths Analysis ---
             strengths_df = clean_data(df_dict.get('strengths')) # Already renamed 'theme' to 'strength_name' in load_data
@@ -409,11 +425,11 @@ def main():
                 tgv_viz_data = tgv_counts.groupby(['high_performer', 'Talent Group Variable (TGV)'])['tgv_count'].mean().reset_index()
                 
                 fig_tgv = px.bar(tgv_viz_data, x='Talent Group Variable (TGV)', y='tgv_count', color='high_performer', 
-                               barmode='group', title="Average TGV-mapped Strengths per Person",
-                               labels={'Talent Group Variable (TGV)': 'Talent Group', 'tgv_count': 'Avg. Strengths per Person'})
+                                 barmode='group', title="Average TGV-mapped Strengths per Person",
+                                 labels={'Talent Group Variable (TGV)': 'Talent Group', 'tgv_count': 'Avg. Strengths per Person'})
                 st.plotly_chart(fig_tgv, use_container_width=True)
             else:
-                st.warning("`Talent Variable (TV) & Talent Group Variable (TGV).csv` is needed for TGV analysis.")
+                st.warning("`Study Case DA - Talent Variable (TV) & Talent Group Variable (TGV).csv` is needed for TGV analysis.")
 
     # --- Tab 5: Success Formula Synthesis ---
     with tab5:
@@ -465,7 +481,7 @@ def main():
         ---
         
         #### **TGV 2: Cognitive & Strategic Agility (Weight: 35%)**
-        *Measures problem-solving and forward-thinking capabilities.*
+        *Measures problem-solving and-thinking capabilities.*
         
         * **TV 2.1 (Strength):** Has 'Strategic' or 'Analytical' Strength  *(Weight: 40%)*
         * **TV 2.2 (Psych):** `PAPI 'A'` (Analytical) Score >= 7  *(Weight: 30%)*
@@ -495,4 +511,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
