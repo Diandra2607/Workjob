@@ -376,33 +376,33 @@ else:
                                 params={"ids": tuple(final.employee_id.unique().astype(str))}
                             )
                             final = final.merge(emp_names, on='employee_id', how='left')
-                    except Exception as e:
+                except Exception as e:
                         st.warning(f"Could not get employee names (table 'employees' missing?): {e}")
                         final['fullname'] = 'N/A' # Beri nilai default
 
-                    st.subheader("Ranked Talent List")
-                    st.dataframe(final.rename(columns={"employee_id": "Employee ID", "fullname": "Name", "final_match_rate": "Final Match Rate (%)"}))
+                st.subheader("Ranked Talent List")
+                st.dataframe(final.rename(columns={"employee_id": "Employee ID", "fullname": "Name", "final_match_rate": "Final Match Rate (%)"}))
 
-                    st.subheader("Per-Employee TGV Overview (Top TGVs & Gaps)")
-                    tgv_scores = df[['employee_id', 'tgv_name', 'tgv_match_rate']].drop_duplicates()
-                    top_tgvs = tgv_scores.sort_values(['employee_id', 'tgv_match_rate'], ascending=[True, False]).groupby('employee_id').head(3)
-                    st.dataframe(top_tgvs)
+                st.subheader("Per-Employee TGV Overview (Top TGVs & Gaps)")
+                tgv_scores = df[['employee_id', 'tgv_name', 'tgv_match_rate']].drop_duplicates()
+                top_tgvs = tgv_scores.sort_values(['employee_id', 'tgv_match_rate'], ascending=[True, False]).groupby('employee_id').head(3)
+                st.dataframe(top_tgvs)
 
-                    st.subheader("Match Rate Distribution")
-                    fig = px.histogram(final, x="final_match_rate", nbins=20, labels={"final_match_rate": "Final Match Rate (%)"}, title="Distribution of Final Match Rate")
-                    st.plotly_chart(fig, use_container_width=True)
+                st.subheader("Match Rate Distribution")
+                fig = px.histogram(final, x="final_match_rate", nbins=20, labels={"final_match_rate": "Final Match Rate (%)"}, title="Distribution of Final Match Rate")
+                st.plotly_chart(fig, use_container_width=True)
 
-                    st.subheader("TGV Heatmap for Top Candidates")
-                    topN = st.slider("Top N candidates", min_value=3, max_value=20, value=6)
-                    top_emps = final.head(topN).employee_id.tolist()
+                st.subheader("TGV Heatmap for Top Candidates")
+                topN = st.slider("Top N candidates", min_value=3, max_value=20, value=6)
+                top_emps = final.head(topN).employee_id.tolist()
                     
-                    if top_emps:
+                if top_emps:
                         heat = tgv_scores[tgv_scores.employee_id.isin(top_emps)].pivot(index='employee_id', columns='tgv_name', values='tgv_match_rate').fillna(0)
                         st.dataframe(heat)
-                    else:
+                else:
                         st.info("Not enough candidates to display heatmap.")
 
-                    if not final.empty:
+                if not final.empty:
                         best_emp = final.iloc[0].employee_id
                         st.subheader(f"Profile of Top Candidate: {best_emp}")
                         best_tgvs = tgv_scores[tgv_scores.employee_id == best_emp]
@@ -410,23 +410,23 @@ else:
                             fig2 = px.bar_polar(best_tgvs, r='tgv_match_rate', theta='tgv_name', title=f"Top Candidate {best_emp} - TGV Match Rates", template="plotly")
                             st.plotly_chart(fig2, use_container_width=True)
                     
-                    st.subheader("AI-Generated Job Profile (OpenRouter)")
-                    job_profile = generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements)
+                st.subheader("AI-Generated Job Profile (OpenRouter)")
+                job_profile = generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements)
                     
-                    st.markdown("**Job Description**")
-                    st.write(job_profile.get("description", "No description generated."))
+                st.markdown("**Job Description**")
+                st.write(job_profile.get("description", "No description generated."))
                     
-                    st.markdown("**Job Requirements / Key Competencies**")
-                    requirements = job_profile.get("requirements", [])
-                    if requirements:
+                st.markdown("**Job Requirements / Key Competencies**")
+                requirements = job_profile.get("requirements", [])
+                if requirements:
                         for r in requirements:
                             st.write(f"- {r}")
-                    else:
+                else:
                         st.write("No requirements generated.")
 
-                    st.markdown("**Why these competencies**")
-                    summary = job_profile.get("competencies_summary", [])
-                    if summary:
+                st.markdown("**Why these competencies**")
+                summary = job_profile.get("competencies_summary", [])
+                if summary:
                         for s in summary:
                             st.write(f"- {s}")
                 else:
