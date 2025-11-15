@@ -70,7 +70,7 @@ Output JSON with keys: description, requirements (array), competencies_summary (
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
-    url = "https://api.openrouter.ai/v1/chat/completions"
+    url = "https://openrouter.ai/v1/chat/completions"
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -442,4 +442,5 @@ else:
                 st.error("Ini berarti ID Benchmark yang Anda masukkan (contoh: 100012, 100022) TIDAK DITEMUKAN di tabel 'talent_benchmarks' Anda. Silakan periksa kembali ID Anda.")
             
             # Jika 'e' ada di locals(), berarti error sudah ditampilkan di atas, jadi jangan lakukan apa-apa lagi.
+
 
