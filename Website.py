@@ -80,12 +80,12 @@ Output ONLY JSON with keys:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://workjob.streamlit.app" 
+         "X-Title": "WorkJob"      
     }
     
     # URL ini sudah benar
-    url = "https://openrouter.ai/chat"
-    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status() # Cek error HTTP (4xx, 5xx)
@@ -463,6 +463,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
