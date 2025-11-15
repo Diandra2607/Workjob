@@ -13,7 +13,7 @@ import plotly.express as px
 # Ambil dari Streamlit Secrets, BUKAN di-hardcode
 DATABASE_URL = os.getenv("DATABASE_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "qwen/qwen-2.5-7b-instruct"
+OPENROUTER_MODEL = "gpt-oss-20b:free"
 
 # --- DB connection ---
 @st.cache_resource
@@ -53,14 +53,14 @@ Role name: {role_name}
 Job level: {job_level}
 Role purpose: {role_purpose}
 
-Hints: {example_requirements}
+If available, suggested hints: {example_requirements}
 
 Output ONLY JSON with keys:
 "responsibilities", "inputs", "outputs", "qualifications", "competencies".
 """
 
     payload = {
-        "model": "qwen/qwen-2.5-7b-instruct",   # Model diperbaiki
+        "model": "openai/gpt-oss-20b:free",  # Menggunakan versi free (jika tersedia)
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -78,7 +78,7 @@ Output ONLY JSON with keys:
     url = "https://openrouter.ai/api/v1/chat/completions"
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        resp = requests.post(url, headers=headers, json=payload, timeout=60)
         resp.raise_for_status()
 
         try:
@@ -448,6 +448,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
