@@ -32,7 +32,6 @@ def get_engine():
 engine = get_engine()
 
 # --- Helpers: OpenRouter LLM call ---
-# --- Helpers: OpenRouter LLM call ---
 def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements=None):
     if not OPENROUTER_API_KEY:
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
@@ -45,7 +44,7 @@ def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_
         "3) Work Outputs (2-4 bullets), "
         "4) Qualifications (3-5 bullets), "
         "5) Competencies (5-8 bullets). "
-        "Output must be valid JSON."
+        "Output must be valid JSON without any explanation."
     )
 
     user_prompt = f"""
@@ -60,7 +59,7 @@ Output ONLY JSON with keys:
 """
 
     payload = {
-        "model": "openai/gpt-oss-20b:free",  # Menggunakan versi free (jika tersedia)
+        "model": "openai/gpt-oss-20b:free",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -76,6 +75,13 @@ Output ONLY JSON with keys:
     }
 
     url = "https://openrouter.ai/api/v1/chat/completions"
+
+    def clean_json_output(text):
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.replace("```json", "")
+            text = text.replace("```", "")
+        return text.strip()
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -93,11 +99,13 @@ Output ONLY JSON with keys:
         else:
             raw_text = json.dumps(data)
 
+        cleaned = clean_json_output(raw_text)
+
         try:
-            parsed = json.loads(raw_text)
+            parsed = json.loads(cleaned)
         except Exception:
-            st.warning("AI did not return valid JSON. Showing raw output:")
-            st.code(raw_text)
+            st.warning("AI did not return valid JSON even after cleaning. Showing raw output:")
+            st.code(cleaned)
             return {}
 
         return parsed
@@ -108,7 +116,7 @@ Output ONLY JSON with keys:
             st.error("Server response:")
             st.code(e.response.text)
         return {}
-
+        
 # --- Helpers: Insert job vacancy + mapping (records) ---
 def create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids):
     # Pastikan tabel ada
@@ -448,6 +456,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
