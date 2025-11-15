@@ -84,7 +84,7 @@ Output ONLY JSON with keys:
     }
     
     # URL ini sudah benar
-    url = "https://openrouter.ai/chat"
+    url = "https://openrouter.ai/api/v1/chat/completions"
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
