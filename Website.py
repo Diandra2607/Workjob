@@ -84,7 +84,7 @@ Output ONLY JSON with keys:
     }
     
     # URL ini sudah benar
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    url = "https://openrouter.ai/chat"
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
@@ -463,6 +463,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
