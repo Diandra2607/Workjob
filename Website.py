@@ -13,7 +13,7 @@ import plotly.express as px
 # Ambil dari Streamlit Secrets, BUKAN di-hardcode
 DATABASE_URL = os.getenv("DATABASE_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "gpt-oss-20b"
+OPENROUTER_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
 # --- DB connection ---
 @st.cache_resource
@@ -463,6 +463,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
