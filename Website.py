@@ -293,13 +293,22 @@ ORDER BY tvr.employee_id, tvr.tgv_name, tvr.tv_name;
 
 # --- Run the matching flow ---
 def run_matching(conn, benchmark_employee_ids):
-    # FIX: Ubah 'integer' menjadi 'text' agar sesuai dengan skema talent_benchmarks
-    conn.execute(text("CREATE TEMP TABLE IF NOT EXISTS benchmarks_tmp (employee_id text) ON COMMIT DROP;"))
+    # --- PERBAIKAN (Supabase Deployment) ---
+    # Kolom 'employee_id' di tabel Supabase 'talent_benchmarks'
+    # kemungkinan besar bertipe INTEGER/NUMERIC (karena di-upload dari CSV).
+    # Temp table 'benchmarks_tmp' HARUS cocok dengan tipe data tersebut.
+
+    # 1. Buat temp table dengan tipe data INTEGER
+    conn.execute(text("CREATE TEMP TABLE IF NOT EXISTS benchmarks_tmp (employee_id integer) ON COMMIT DROP;"))
     conn.execute(text("TRUNCATE TABLE benchmarks_tmp;"))
+    
     if benchmark_employee_ids:
-        # FIX: Masukkan ID sebagai string (text), bukan integer
-        rows = [{"employee_id": str(e)} for e in benchmark_employee_ids] 
-        conn.execute(text("INSERT INTO benchmarks_tmp (employee_id) VALUES (:employee_id)"), rows)
+        # 2. Pastikan kita hanya memasukkan angka dan mengonversinya ke INTEGER
+        # (Kita tambahkan .isdigit() untuk keamanan)
+        rows = [{"employee_id": int(e)} for e in benchmark_employee_ids if e.isdigit()] 
+        
+        if rows: # Hanya jalankan jika ada baris yang valid
+            conn.execute(text("INSERT INTO benchmarks_tmp (employee_id) VALUES (:employee_id)"), rows)
     
     df = pd.read_sql(text(MATCHING_SQL), conn)
     return df
@@ -329,6 +338,10 @@ else:
         else:
             st.info(f"Using benchmarks: {', '.join(benchmark_employee_ids)}")
 
+            # --- PERBAIKAN: Inisialisasi df sebagai DataFrame kosong ---
+            df = pd.DataFrame() 
+            job_vacancy_id = None
+
             try:
                 with engine.begin() as conn:
                     job_vacancy_id = create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids)
@@ -336,16 +349,25 @@ else:
                     
                     df = run_matching(conn, benchmark_employee_ids)
 
-                # --- INI ADALAH PERBAIKAN PENTING ---
-                if df.empty:
-                    st.warning("Analysis failed: No data returned from SQL query.")
-                    st.error("Pastikan Benchmark Employee IDs (contoh: 100000, 100001) yang Anda masukkan BENAR-BENAR ADA di tabel 'talent_benchmarks' Anda.")
-                
-                else:
-                    # --- SEMUA VISUALISASI AMAN DI SINI ---
-                    final = df[['employee_id', 'final_match_rate']].drop_duplicates().sort_values(['final_match_rate'], ascending=False)
+            # --- PERBAIKAN: Tangkap error koneksi/SQL secara spesifik ---
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
+                st.error(f"An error occurred during database connection or SQL query.")
+                st.exception(e) # Ini akan mencetak error 'Cannot assign requested address'
+                st.info("If this is a connection error, please ensure you are using the 'Connection Pooling' URL from your Supabase settings in your Streamlit Secrets.")
+            
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {e}")
+                st.exception(e)
 
-                    try:
+            # --- PERBAIKAN: Pindahkan logika visualisasi ke luar 'try' ---
+            
+            # Cek jika df *tidak* kosong (berarti SQL berhasil)
+            if not df.empty:
+                st.info("SQL Query successful. Rendering visualizations...")
+                # --- SEMUA VISUALISASI AMAN DI SINI ---
+                final = df[['employee_id', 'final_match_rate']].drop_duplicates().sort_values(['final_match_rate'], ascending=False)
+
+                try:
                         with engine.connect() as conn:
                             # Pastikan 'employees' adalah tabel yang benar dan ID di-cast ke string
                             emp_names = pd.read_sql(
@@ -407,13 +429,15 @@ else:
                     if summary:
                         for s in summary:
                             st.write(f"- {s}")
-                    else:
-                        st.write("No summary generated.")
-                    
-                    st.download_button("Download full raw results (CSV)", df.to_csv(index=False), file_name=f"matching_results_job_{job_vacancy_id}.csv", mime="text/csv")
+                else:
+                    st.write("No summary generated.")
+                
+                # Pastikan tombol download hanya muncul jika df tidak kosong
+                st.download_button("Download full raw results (CSV)", df.to_csv(index=False), file_name=f"matching_results_job_{job_vacancy_id}.csv", mime="text/csv")
             
-            except Exception as e:
-                # Ini akan menangkap error SQL jika terjadi (seperti ID tidak ada)
-                st.error(f"An error occurred during SQL execution: {e}")
-                st.info("Pastikan ID Benchmark yang Anda masukkan ada di tabel 'talent_benchmarks'.")
-
+            # Cek jika df KOSONG tapi TIDAK ADA ERROR (artinya ID tidak ditemukan)
+            elif 'e' not in locals(): 
+                st.warning("Analysis complete, but no data was returned.")
+                st.error("Ini berarti ID Benchmark yang Anda masukkan (contoh: 100012, 100022) TIDAK DITEMUKAN di tabel 'talent_benchmarks' Anda. Silakan periksa kembali ID Anda.")
+            
+            # Jika 'e' ada di locals(), berarti error sudah ditampilkan di atas, jadi jangan lakukan apa-apa lagi.
