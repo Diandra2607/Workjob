@@ -13,7 +13,7 @@ import plotly.express as px
 # Ambil dari Streamlit Secrets, BUKAN di-hardcode
 DATABASE_URL = os.getenv("DATABASE_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
+OPENROUTER_MODEL = "gpt-oss-20b"
 
 # --- DB connection ---
 @st.cache_resource
@@ -84,7 +84,7 @@ Output ONLY JSON with keys:
     }
     
     # URL ini sudah benar
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    url = "https://openrouter.ai/chat"
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
