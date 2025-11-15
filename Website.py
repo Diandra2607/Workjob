@@ -39,28 +39,30 @@ def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
         return {}
 
-    # --- PROMPT ---
+    # ----- PROMPTS -----
     system_prompt = (
-        "You are an expert talent/HR analyst. Produce five lists for a job profile: "
+        "You are an expert talent/HR analyst. Given role metadata, produce 5 lists for a job profile: "
         "1) Key Responsibilities (4-6 bullets), "
         "2) Work Inputs (2-4 bullets), "
         "3) Work Outputs (2-4 bullets), "
         "4) Qualifications (3-5 bullets), "
-        "5) Competencies (5-8 bullets)."
+        "5) Competencies (5-8 bullets). "
+        "Output must be valid JSON only."
     )
+
     user_prompt = f"""
 Role name: {role_name}
 Job level: {job_level}
 Role purpose: {role_purpose}
 
-Hints: {example_requirements}
+If available, suggested hints: {example_requirements}
 
 Output ONLY JSON with keys:
-responsibilities, inputs, outputs, qualifications, competencies.
+"responsibilities", "inputs", "outputs", "qualifications", "competencies".
 """
 
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": "qwen/qwen2.5:latest",   # <<-- MODEL FIXED HERE
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -69,11 +71,10 @@ responsibilities, inputs, outputs, qualifications, competencies.
         "temperature": 0.2
     }
 
-    # --- 📌 HEADER WAJIB SESUAI DOKUMENTASI ---
+    # ----- HEADERS -----
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://workjob.streamlit.app",   # penting banget!
         "X-Title": "WorkJob"
     }
 
@@ -83,22 +84,29 @@ responsibilities, inputs, outputs, qualifications, competencies.
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
 
-        # --- JSON PARSING ---
+        # Parse JSON response
         try:
             data = resp.json()
-        except:
-            st.error("OpenRouter returned non-JSON response:")
+        except Exception as json_err:
+            st.error(f"JSON decode error: {json_err}")
             st.code(resp.text)
             return {}
 
-        text_out = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        # Extract AI message
+        if "choices" in data and len(data["choices"]) > 0:
+            raw_text = data["choices"][0]["message"]["content"]
+        else:
+            raw_text = json.dumps(data)
 
+        # Try convert to JSON
         try:
-            return json.loads(text_out)
-        except:
-            st.warning("AI did not return valid JSON:")
-            st.code(text_out)
+            parsed = json.loads(raw_text)
+        except Exception:
+            st.warning("AI did not return valid JSON. Showing raw output:")
+            st.code(raw_text)
             return {}
+
+        return parsed
 
     except requests.exceptions.RequestException as e:
         st.error(f"OpenRouter call failed: {e}")
@@ -106,7 +114,6 @@ responsibilities, inputs, outputs, qualifications, competencies.
             st.error("Server response:")
             st.code(e.response.text)
         return {}
-
 
 # --- Helpers: Insert job vacancy + mapping (records) ---
 def create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids):
@@ -447,6 +454,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
