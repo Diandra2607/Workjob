@@ -74,6 +74,9 @@ Output JSON with keys: description, requirements (array), competencies_summary (
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
+        # TEMPORARY DEBUG
+        st.write("RAW RESPONSE STATUS:", resp.status_code)
+        st.write("RAW RESPONSE TEXT:", resp.text)
         resp.raise_for_status()
         data = resp.json()
 
@@ -442,5 +445,6 @@ else:
                 st.error("Ini berarti ID Benchmark yang Anda masukkan (contoh: 100012, 100022) TIDAK DITEMUKAN di tabel 'talent_benchmarks' Anda. Silakan periksa kembali ID Anda.")
             
             # Jika 'e' ada di locals(), berarti error sudah ditampilkan di atas, jadi jangan lakukan apa-apa lagi.
+
 
 
