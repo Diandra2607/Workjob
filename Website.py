@@ -32,10 +32,19 @@ def get_engine():
 engine = get_engine()
 
 # --- Helpers: OpenRouter LLM call ---
+import time
+import random
+
 def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements=None):
     if not OPENROUTER_API_KEY:
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
         return {}
+
+    MODEL_LIST = [
+        "openai/gpt-oss-20b:free",
+        "qwen/qwen2.5:latest",
+        "nousresearch/hermes-3-llama-3.1-70b:free"
+    ]
 
     system_prompt = (
         "You are an expert talent/HR analyst. Given role metadata, produce 5 lists for a job profile: "
@@ -44,7 +53,7 @@ def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_
         "3) Work Outputs (2-4 bullets), "
         "4) Qualifications (3-5 bullets), "
         "5) Competencies (5-8 bullets). "
-        "Output must be valid JSON without any explanation."
+        "Output must be valid JSON."
     )
 
     user_prompt = f"""
@@ -58,64 +67,58 @@ Output ONLY JSON with keys:
 "responsibilities", "inputs", "outputs", "qualifications", "competencies".
 """
 
-    payload = {
-        "model": "openai/gpt-oss-20b:free",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "max_tokens": 1000,
-        "temperature": 0.2
-    }
-
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "X-Title": "WorkJob"
     }
 
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    # --- RETRY + FALLBACK ---
+    for model in MODEL_LIST:
+        for retry in range(3):
 
-    def clean_json_output(text):
-        text = text.strip()
-        if text.startswith("```"):
-            text = text.replace("```json", "")
-            text = text.replace("```", "")
-        return text.strip()
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "max_tokens": 1000,
+                "temperature": 0.2
+            }
 
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=60)
+                if resp.status_code == 429:
+                    # Ratelimit → tunggu bentar → ulangi
+                    sleep_time = 1.5 + random.random()
+                    st.info(f"Model {model} rate-limited. Retrying in {sleep_time:.1f}s...")
+                    time.sleep(sleep_time)
+                    continue
 
-        try:
-            data = resp.json()
-        except Exception as json_err:
-            st.error(f"JSON decode error: {json_err}")
-            st.code(resp.text)
-            return {}
+                resp.raise_for_status()
 
-        if "choices" in data and len(data["choices"]) > 0:
-            raw_text = data["choices"][0]["message"]["content"]
-        else:
-            raw_text = json.dumps(data)
+                data = resp.json()
+                raw_text = data["choices"][0]["message"]["content"]
 
-        cleaned = clean_json_output(raw_text)
+                try:
+                    parsed = json.loads(raw_text)
+                    return parsed  # SUCCESS ✔️
+                except Exception:
+                    st.warning("AI did not return valid JSON. Showing raw output:")
+                    st.code(raw_text)
+                    return {}
 
-        try:
-            parsed = json.loads(cleaned)
-        except Exception:
-            st.warning("AI did not return valid JSON even after cleaning. Showing raw output:")
-            st.code(cleaned)
-            return {}
+            except requests.exceptions.RequestException as e:
+                st.warning(f"Model {model} retry {retry+1}/3 failed: {e}")
+                time.sleep(1.0)
 
-        return parsed
+        st.warning(f"Model {model} failed, switching to next model...")
 
-    except requests.exceptions.RequestException as e:
-        st.error(f"OpenRouter call failed: {e}")
-        if hasattr(e, "response") and e.response is not None:
-            st.error("Server response:")
-            st.code(e.response.text)
-        return {}
+    # Semua gagal → ya sudah
+    st.error("All OpenRouter models failed after retries.")
+    return {}
         
 # --- Helpers: Insert job vacancy + mapping (records) ---
 def create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids):
@@ -456,6 +459,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
