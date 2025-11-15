@@ -32,30 +32,36 @@ def get_engine():
 engine = get_engine()
 
 # --- Helpers: OpenRouter LLM call ---
+# --- Helpers: OpenRouter LLM call ---
 def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements=None):
     # Cek apakah API Key ada
     if not OPENROUTER_API_KEY:
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
-        return {
-            "description": "AI generation disabled. Please set OPENROUTER_API_KEY secret.",
-            "requirements": [],
-            "competencies_summary": []
-        }
-        
+        return {} # Return dictionary kosong
+
+    # --- 1. PERUBAHAN PROMPT ---
+    # Kita ubah instruksi AI agar sesuai dengan kategori di gambar Anda
     system_prompt = (
-        "You are an expert talent/HR analyst. Given role metadata, produce: "
-        "1) a concise Job Description (2-4 sentences), "
-        "2) a bulleted list of Job Requirements / Key Competencies (8-12 bullets), "
-        "3) short 'Why this role needs these competencies' summary (2-3 bullets)."
+        "You are an expert talent/HR analyst. Given role metadata, produce 5 lists for a job profile: "
+        "1) Key Responsibilities (4-6 bullets), "
+        "2) Work Inputs (2-4 bullets), "
+        "3) Work Outputs (2-4 bullets), "
+        "4) Qualifications (3-5 bullets), "
+        "5) Competencies (5-8 bullets)."
     )
     user_prompt = f"""
 Role name: {role_name}
 Job level: {job_level}
 Role purpose: {role_purpose}
 
-If available, suggested requirements: {example_requirements}
+If available, suggested hints: {example_requirements}
 
-Output JSON with keys: description, requirements (array), competencies_summary (array).
+Output ONLY JSON with keys: 
+"responsibilities" (array of strings), 
+"inputs" (array of strings), 
+"outputs" (array of strings), 
+"qualifications" (array of strings), 
+"competencies" (array of strings).
 """
     payload = {
         "model": OPENROUTER_MODEL,
@@ -63,49 +69,60 @@ Output JSON with keys: description, requirements (array), competencies_summary (
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 700,
+        "max_tokens": 1000, # Tambah token untuk output yang lebih panjang
         "temperature": 0.2
     }
-    # --- DI FUNGSI generate_job_profile_openrouter ---
 
+    # --- 2. PERBAIKAN HEADER (Memperbaiki error 'Expecting value...') ---
+    # OpenRouter memerlukan header ini.
+    # GANTI "workjob" dengan nama aplikasi Anda di Streamlit Cloud jika berbeda.
+    # Saya berasumsi namanya "workjob" dari path file Anda.
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        
-        # --- TAMBAHKAN BARIS INI ---
-        # Ganti "nama-app-anda" dengan nama URL aplikasi Streamlit Anda
-        "HTTP-Referer": "https://workjob-glpsmsncsdsxbddqzgicnb.streamlit.app/" 
+        "HTTP-Referer": "https://workjob.streamlit.app" 
     }
-    url = "https://openrouter.ai/v1/chat/completions"
+    
+    # URL ini sudah benar
+    url = "https://openrouter.ai/api/v1/chat/completions"
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
+        resp.raise_for_status() # Cek error HTTP (4xx, 5xx)
+
+        # --- 3. PERBAIKAN ERROR HANDLING ---
+        # Coba parse JSON, jika gagal, tampilkan teks mentah dari server
+        try:
+            data = resp.json()
+        except requests.exceptions.JSONDecodeError as json_err:
+            st.error(f"OpenRouter call failed (JSONDecodeError): {json_err}")
+            st.error("Ini biasanya karena API Key salah atau Referer URL salah.")
+            st.error("Teks respons mentah dari server:")
+            st.code(resp.text) # Menampilkan HTML error jika ada
+            return {} # Return dictionary kosong
 
         text_out = None
         if "choices" in data and len(data["choices"]) > 0:
             text_out = data["choices"][0]["message"]["content"]
         else:
-            text_out = data.get("result") or json.dumps(data)
+            text_out = json.dumps(data) # Fallback
 
         try:
             parsed = json.loads(text_out)
         except Exception:
-            parsed = {
-                "description": text_out,
-                "requirements": [],
-                "competencies_summary": []
-            }
+            # Fallback jika AI gagal memproduksi JSON
+            st.warning("AI tidak mengembalikan JSON yang valid. Menampilkan teks mentah:")
+            st.code(text_out)
+            return {}
+        
         return parsed
         
     except requests.exceptions.RequestException as e:
         st.error(f"OpenRouter call failed: {e}")
-        return {
-            "description": f"AI call failed: {e}",
-            "requirements": [],
-            "competencies_summary": []
-        }
+        # Tampilkan respons server jika ada error
+        if e.response is not None:
+             st.error(f"Response from server: {e.response.text}")
+        return {} # Return dictionary kosong
 
 # --- Helpers: Insert job vacancy + mapping (records) ---
 def create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids):
@@ -418,36 +435,34 @@ else:
                             st.plotly_chart(fig2, use_container_width=True)
                     
                 st.subheader("AI-Generated Job Profile (OpenRouter)")
-                job_profile = generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements)
-                    
-                st.markdown("**Job Description**")
-                st.write(job_profile.get("description", "No description generated."))
-                    
-                st.markdown("**Job Requirements / Key Competencies**")
-                requirements = job_profile.get("requirements", [])
-                if requirements:
-                        for r in requirements:
-                            st.write(f"- {r}")
-                else:
-                        st.write("No requirements generated.")
 
-                st.markdown("**Why these competencies**")
-                summary = job_profile.get("competencies_summary", [])
-                if summary:
-                        for s in summary:
-                            st.write(f"- {s}")
-                else:
-                    st.write("No summary generated.")
+        # Buat fungsi helper kecil untuk merender list
+        def render_list(title, items_list):
+            st.markdown(f"**{title}**")
+            if items_list and isinstance(items_list, list):
+                for item in items_list:
+                    st.write(f"- {item}")
+            else:
+                st.info(f"No {title.lower()} generated or format is incorrect.")
+            st.write("---") # Pemisah
+
+        try:
+            # Panggil fungsi yang sudah diubah
+            job_profile = generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements)
+            
+            if job_profile: # Pastikan job_profile tidak kosong
+                # Render setiap list sesuai kunci JSON yang baru
+                render_list("Key Responsibilities", job_profile.get("responsibilities"))
+                render_list("Work Inputs", job_profile.get("inputs"))
+                render_list("Work Outputs", job_profile.get("outputs"))
+                render_list("Qualifications", job_profile.get("qualifications"))
+                render_list("Competencies", job_profile.get("competencies"))
+            else:
+                st.warning("AI Profile generation failed. Check error messages above.")
                 
-                # Pastikan tombol download hanya muncul jika df tidak kosong
-                st.download_button("Download full raw results (CSV)", df.to_csv(index=False), file_name=f"matching_results_job_{job_vacancy_id}.csv", mime="text/csv")
-            
-            # Cek jika df KOSONG tapi TIDAK ADA ERROR (artinya ID tidak ditemukan)
-            elif 'e' not in locals(): 
-                st.warning("Analysis complete, but no data was returned.")
-                st.error("Ini berarti ID Benchmark yang Anda masukkan (contoh: 100012, 100022) TIDAK DITEMUKAN di tabel 'talent_benchmarks' Anda. Silakan periksa kembali ID Anda.")
-            
-            # Jika 'e' ada di locals(), berarti error sudah ditampilkan di atas, jadi jangan lakukan apa-apa lagi.
+        except Exception as e:
+            st.error(f"An error occurred while rendering AI profile: {e}")
+            st.exception(e)
 
 
 
