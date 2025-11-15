@@ -37,12 +37,11 @@ def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_
     # Cek apakah API Key ada
     if not OPENROUTER_API_KEY:
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
-        return {} # Return dictionary kosong
+        return {}
 
-    # --- 1. PERUBAHAN PROMPT ---
-    # Kita ubah instruksi AI agar sesuai dengan kategori di gambar Anda
+    # --- PROMPT ---
     system_prompt = (
-        "You are an expert talent/HR analyst. Given role metadata, produce 5 lists for a job profile: "
+        "You are an expert talent/HR analyst. Produce five lists for a job profile: "
         "1) Key Responsibilities (4-6 bullets), "
         "2) Work Inputs (2-4 bullets), "
         "3) Work Outputs (2-4 bullets), "
@@ -54,75 +53,60 @@ Role name: {role_name}
 Job level: {job_level}
 Role purpose: {role_purpose}
 
-If available, suggested hints: {example_requirements}
+Hints: {example_requirements}
 
-Output ONLY JSON with keys: 
-"responsibilities" (array of strings), 
-"inputs" (array of strings), 
-"outputs" (array of strings), 
-"qualifications" (array of strings), 
-"competencies" (array of strings).
+Output ONLY JSON with keys:
+responsibilities, inputs, outputs, qualifications, competencies.
 """
+
     payload = {
         "model": OPENROUTER_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 1000, # Tambah token untuk output yang lebih panjang
+        "max_tokens": 1000,
         "temperature": 0.2
     }
 
-    # --- 2. PERBAIKAN HEADER (Memperbaiki error 'Expecting value...') ---
-    # OpenRouter memerlukan header ini.
-    # GANTI "workjob" dengan nama aplikasi Anda di Streamlit Cloud jika berbeda.
-    # Saya berasumsi namanya "workjob" dari path file Anda.
+    # --- 📌 HEADER WAJIB SESUAI DOKUMENTASI ---
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-         "X-Title": "WorkJob"      
+        "HTTP-Referer": "https://workjob.streamlit.app",   # penting banget!
+        "X-Title": "WorkJob"
     }
-    
-    # URL ini sudah benar
+
     url = "https://openrouter.ai/api/v1/chat/completions"
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status() # Cek error HTTP (4xx, 5xx)
+        resp.raise_for_status()
 
-        # --- 3. PERBAIKAN ERROR HANDLING ---
-        # Coba parse JSON, jika gagal, tampilkan teks mentah dari server
+        # --- JSON PARSING ---
         try:
             data = resp.json()
-        except requests.exceptions.JSONDecodeError as json_err:
-            st.error(f"OpenRouter call failed (JSONDecodeError): {json_err}")
-            st.error("Ini biasanya karena API Key salah atau Referer URL salah.")
-            st.error("Teks respons mentah dari server:")
-            st.code(resp.text) # Menampilkan HTML error jika ada
-            return {} # Return dictionary kosong
+        except:
+            st.error("OpenRouter returned non-JSON response:")
+            st.code(resp.text)
+            return {}
 
-        text_out = None
-        if "choices" in data and len(data["choices"]) > 0:
-            text_out = data["choices"][0]["message"]["content"]
-        else:
-            text_out = json.dumps(data) # Fallback
+        text_out = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
         try:
-            parsed = json.loads(text_out)
-        except Exception:
-            # Fallback jika AI gagal memproduksi JSON
-            st.warning("AI tidak mengembalikan JSON yang valid. Menampilkan teks mentah:")
+            return json.loads(text_out)
+        except:
+            st.warning("AI did not return valid JSON:")
             st.code(text_out)
             return {}
-        
-        return parsed
-        
+
     except requests.exceptions.RequestException as e:
         st.error(f"OpenRouter call failed: {e}")
-        # Tampilkan respons server jika ada error
-        if e.response is not None:
-             st.error(f"Response from server: {e.response.text}")
-        return {} # Return dictionary kosong
+        if hasattr(e, "response") and e.response is not None:
+            st.error("Server response:")
+            st.code(e.response.text)
+        return {}
+
 
 # --- Helpers: Insert job vacancy + mapping (records) ---
 def create_job_vacancy(conn, role_name, job_level, role_purpose, benchmark_employee_ids):
