@@ -13,7 +13,7 @@ import plotly.express as px
 # Ambil dari Streamlit Secrets, BUKAN di-hardcode
 DATABASE_URL = os.getenv("DATABASE_URL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+OPENROUTER_MODEL = "qwen/qwen-2.5-7b-instruct"
 
 # --- DB connection ---
 @st.cache_resource
@@ -34,12 +34,10 @@ engine = get_engine()
 # --- Helpers: OpenRouter LLM call ---
 # --- Helpers: OpenRouter LLM call ---
 def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_requirements=None):
-    # Cek apakah API Key ada
     if not OPENROUTER_API_KEY:
         st.warning("OPENROUTER_API_KEY secret is not set. AI Profile generation is disabled.")
         return {}
 
-    # ----- PROMPTS -----
     system_prompt = (
         "You are an expert talent/HR analyst. Given role metadata, produce 5 lists for a job profile: "
         "1) Key Responsibilities (4-6 bullets), "
@@ -47,7 +45,7 @@ def generate_job_profile_openrouter(role_name, job_level, role_purpose, example_
         "3) Work Outputs (2-4 bullets), "
         "4) Qualifications (3-5 bullets), "
         "5) Competencies (5-8 bullets). "
-        "Output must be valid JSON only."
+        "Output must be valid JSON."
     )
 
     user_prompt = f"""
@@ -55,14 +53,14 @@ Role name: {role_name}
 Job level: {job_level}
 Role purpose: {role_purpose}
 
-If available, suggested hints: {example_requirements}
+Hints: {example_requirements}
 
 Output ONLY JSON with keys:
 "responsibilities", "inputs", "outputs", "qualifications", "competencies".
 """
 
     payload = {
-        "model": "qwen/qwen2.5:latest",   # <<-- MODEL FIXED HERE
+        "model": "qwen/qwen-2.5-7b-instruct",   # Model diperbaiki
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -71,7 +69,6 @@ Output ONLY JSON with keys:
         "temperature": 0.2
     }
 
-    # ----- HEADERS -----
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -84,7 +81,6 @@ Output ONLY JSON with keys:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
 
-        # Parse JSON response
         try:
             data = resp.json()
         except Exception as json_err:
@@ -92,13 +88,11 @@ Output ONLY JSON with keys:
             st.code(resp.text)
             return {}
 
-        # Extract AI message
         if "choices" in data and len(data["choices"]) > 0:
             raw_text = data["choices"][0]["message"]["content"]
         else:
             raw_text = json.dumps(data)
 
-        # Try convert to JSON
         try:
             parsed = json.loads(raw_text)
         except Exception:
@@ -454,6 +448,7 @@ else:
         except Exception as e:
             st.error(f"An error occurred while rendering AI profile: {e}")
             st.exception(e)
+
 
 
 
