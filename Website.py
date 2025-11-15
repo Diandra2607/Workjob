@@ -292,20 +292,21 @@ ORDER BY tvr.employee_id, tvr.tgv_name, tvr.tv_name;
 """
 
 # --- Run the matching flow ---
+# --- Run the matching flow ---
 def run_matching(conn, benchmark_employee_ids):
-    # --- PERBAIKAN (Supabase Deployment) ---
-    # Kolom 'employee_id' di tabel Supabase 'talent_benchmarks'
-    # kemungkinan besar bertipe INTEGER/NUMERIC (karena di-upload dari CSV).
-    # Temp table 'benchmarks_tmp' HARUS cocok dengan tipe data tersebut.
+    # --- PERBAIKAN (Type Mismatch) ---
+    # Error "operator does not exist: text = integer" 
+    # membuktikan bahwa 'talent_benchmarks.employee_id' adalah TEXT, bukan INTEGER.
+    # Kita harus membuat temp table 'benchmarks_tmp' agar cocok.
 
-    # 1. Buat temp table dengan tipe data INTEGER
-    conn.execute(text("CREATE TEMP TABLE IF NOT EXISTS benchmarks_tmp (employee_id integer) ON COMMIT DROP;"))
+    # 1. Buat temp table dengan tipe data TEXT
+    conn.execute(text("CREATE TEMP TABLE IF NOT EXISTS benchmarks_tmp (employee_id text) ON COMMIT DROP;"))
     conn.execute(text("TRUNCATE TABLE benchmarks_tmp;"))
     
     if benchmark_employee_ids:
-        # 2. Pastikan kita hanya memasukkan angka dan mengonversinya ke INTEGER
-        # (Kita tambahkan .isdigit() untuk keamanan)
-        rows = [{"employee_id": int(e)} for e in benchmark_employee_ids if e.isdigit()] 
+        # 2. Masukkan ID sebagai string (TEXT), bukan integer
+        # Kita tidak perlu .isdigit() karena ID-nya memang teks
+        rows = [{"employee_id": str(e)} for e in benchmark_employee_ids] 
         
         if rows: # Hanya jalankan jika ada baris yang valid
             conn.execute(text("INSERT INTO benchmarks_tmp (employee_id) VALUES (:employee_id)"), rows)
@@ -441,3 +442,4 @@ else:
                 st.error("Ini berarti ID Benchmark yang Anda masukkan (contoh: 100012, 100022) TIDAK DITEMUKAN di tabel 'talent_benchmarks' Anda. Silakan periksa kembali ID Anda.")
             
             # Jika 'e' ada di locals(), berarti error sudah ditampilkan di atas, jadi jangan lakukan apa-apa lagi.
+
